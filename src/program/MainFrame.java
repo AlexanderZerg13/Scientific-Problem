@@ -7,6 +7,10 @@ package program;
 
 import java.math.BigInteger;
 import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.apache.commons.math.MathException;
+import org.apache.commons.math.special.Erf;
 
 /**
  *
@@ -46,6 +50,7 @@ public class MainFrame extends javax.swing.JFrame {
         jButton1 = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setResizable(false);
 
         jLabel1.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
         jLabel1.setText("Отклонение сигнал/шум (h):");
@@ -172,7 +177,7 @@ public class MainFrame extends javax.swing.JFrame {
             int fCount = Integer.parseInt(jTextFieldFCount.getText());
             int testCount = Integer.parseInt(jTextFieldTestCount.getText());
              
-            performeTest(fFrom, fTo, fCount, h, 1);
+            performeTestDouble(fFrom, fTo, fCount, h, 1);
              
         } catch (NumberFormatException e) {
             jTextPane1.setText("Неверный формат");
@@ -180,6 +185,57 @@ public class MainFrame extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_jButton1ActionPerformed
 
+    private void performeTestDouble(int from, int to, int count, int h, int number) {
+        double[] doubleNumbers = new double[count];
+        double doubleFrom = Math.pow(10, from);
+        double doubleTo = Math.pow(10, to);
+        System.out.println("min: " + doubleFrom + " max: " + doubleTo);
+        
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("#").append(number).append(":\n");
+        Random random = new Random();
+        
+        double mat = 0;
+        double matSqure = 0;
+        double disp;
+        for(int i = 0; i < doubleNumbers.length; i++) {
+            doubleNumbers[i] = Math.round(doubleFrom + random.nextDouble() * (doubleTo - doubleFrom));
+            mat += doubleNumbers[i];
+            matSqure += (doubleNumbers[i] * doubleNumbers[i]);
+            System.out.println(doubleNumbers[i]);
+        }
+        mat /= doubleNumbers.length;
+        matSqure /= doubleNumbers.length;
+        disp = matSqure - (mat * mat);
+        
+        stringBuilder.append("Математическое ожидание (M): ");
+        stringBuilder.append(mat).append("\n");
+        
+        stringBuilder.append("Дисперсия (D): ");
+        stringBuilder.append(disp).append("\n");
+        
+        
+        double p = 0;
+        double averageP = 0;
+        for (int i = 0; i < doubleNumbers.length; i++) {
+            try {
+                p = mainFunction(h, mat, disp, doubleNumbers[i]);
+                averageP += p;
+            } catch (MathException ex) {
+                Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
+                stringBuilder.append(ex.getMessage()).append("\n");
+            }
+            
+            stringBuilder.append("P ошибки (").append(doubleNumbers[i]).append("): ").append(p).append("\n");
+        }
+        
+        averageP /= doubleNumbers.length;
+        stringBuilder.append("\n").append("средняя P ошибки: ").append(averageP).append("\n");
+        
+        
+        jTextPane1.setText(stringBuilder.toString());
+    }
+    
     private void performeTest(int from, int to, int count, int h, int number) {
         BigInteger[] bigNumbers = new BigInteger[count];
         BigInteger bigIntMin = new BigInteger(String.valueOf(pow(10, from)));
@@ -213,6 +269,13 @@ public class MainFrame extends javax.swing.JFrame {
         
         
         jTextPane1.setText(stringBuilder.toString());
+    }
+    
+    private double mainFunction(int h, double m, double d, double f) throws MathException {
+
+        return (1 - Erf.erf(Math.sqrt(2) * h * Math.cos(f)))
+                * (1 / (d * Math.sqrt(2 * Math.PI)))
+                * (Math.pow(Math.E, - Math.pow((f - m), 2) / (2 * (d * d))));
     }
     
     private long pow(long a, long b) {
